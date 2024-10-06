@@ -1,42 +1,23 @@
-/*const int upPin = 3;  // Broche UP pour le CD40193BE (connectée à D3)
-unsigned long previousMillis = 0;
-const long interval = 1000;  // Intervalle d'une seconde (1000 ms)
+// Test avec un arduino du compsant CD40193BE qui est un compteur 4bit inc/dec
 
-void setup() {
-  Serial.begin(9600);    // Initialisation du moniteur série
-  pinMode(upPin, OUTPUT); // Broche UP comme sortie
-  digitalWrite(upPin, LOW); // Initialiser à LOW
-
-  Serial.println("Incrémentation toutes les secondes via Pin 3");
-}
-
-void loop() {
-  unsigned long currentMillis = millis();
-
-  // Si une seconde s'est écoulée
-  if (currentMillis - previousMillis >= interval) {
-    previousMillis = currentMillis;  // Réinitialiser le temps
-
-    // Envoyer une impulsion d'horloge à CLK UP du CD40193BE
-    digitalWrite(upPin, HIGH);
-    delay(10);  // Impulsion courte de 10ms
-    digitalWrite(upPin, LOW);
-
-    Serial.println("Incrémentation du CD40193BE");
-  }
-}
-*/
-
-const int buttonPin = 2;  // Bouton connecté à la broche D2
-const int upPin = 3;      // Broche UP pour le CD40193BE (connectée à D3)
-bool lastButtonState = HIGH;
-unsigned long lastDebounceTime = 0;
+const int buttonPinUp = 2;  // Bouton connecté à la broche D2
+const int buttonPinDown = 3;  // Bouton connecté à la broche D3
+const int upPin = 4;      // Broche UP pour le CD40193BE
+const int downPin = 5;      // Broche DOWN pour le CD40193BE
+bool lastButtonStateUp = HIGH;
+bool lastButtonStateDown = HIGH;
+bool buttonPressedUp = false;
+bool buttonPressedDown = false;
+unsigned long lastDebounceTimeUp = 0;
+unsigned long lastDebounceTimeDown = 0;
 const long debounceDelay = 50;  // Temps de debounce en millisecondes
 
 void setup() {
   Serial.begin(9600);        // Initialisation du moniteur série
-  pinMode(buttonPin, INPUT);  // Utilisation d'une résistance pull-up externe
-  pinMode(upPin, OUTPUT);     // Broche UP comme sortie
+  pinMode(buttonPinUp, INPUT);
+  pinMode(buttonPinDown, INPUT);
+  pinMode(upPin, OUTPUT);
+  pinMode(downPin, OUTPUT);
   
   // Initialisation de la broche UP à LOW
   digitalWrite(upPin, LOW);
@@ -44,28 +25,42 @@ void setup() {
 
 void loop() {
   // Lire l'état actuel du bouton
-  int reading = digitalRead(buttonPin);
+  int readingUp = digitalRead(buttonPinUp);
+  int readingDown = digitalRead(buttonPinDown);
 
-  // Vérifier si l'état du bouton a changé
-  if (reading != lastButtonState) {
-    lastDebounceTime = millis();  // Mettre à jour l'heure du dernier changement
-  }
-
-  // Si l'état a été stable pendant longtemps (pas de rebonds)
-  if ((millis() - lastDebounceTime) > debounceDelay) {
-    // Si le bouton est pressé (LOW)
-    if (reading == LOW) {
+  if (readingUp == LOW) {
+    if (!buttonPressedUp) {
       Serial.println("Bouton pressé - Incrémentation");
 
       // Envoyer une impulsion d'horloge au CD40193BE
+      digitalWrite(downPin, HIGH);
       digitalWrite(upPin, HIGH);
-      delay(10);  // Impulsion courte pour l'incrémentation
+      delay(10);  // Impulsion courte
       digitalWrite(upPin, LOW);
+      buttonPressedUp = true;
+    } else {
+      buttonPressedUp = false; 
+    }
+  }
+
+  if (readingDown == LOW) {
+    if (!buttonPressedDown) {
+      Serial.println("Bouton pressé - Décrémentation");
+
+      // Envoyer une impulsion d'horloge au CD40193BE
+      digitalWrite(upPin, HIGH);
+      digitalWrite(downPin, HIGH);
+      delay(10);  // Impulsion courte
+      digitalWrite(downPin, LOW);
+      buttonPressedDown = true;
+    } else {
+      buttonPressedDown = false; 
     }
   }
 
   // Sauvegarder l'état actuel du bouton
-  lastButtonState = reading;
+  lastButtonStateUp = readingUp;
+  lastButtonStateDown = readingDown;
 
   delay(50);  // Petit délai pour éviter des lectures trop rapides
 }
